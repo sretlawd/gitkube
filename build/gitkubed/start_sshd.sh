@@ -1,16 +1,18 @@
 #!/usr/bin/env sh
 set -e
 
-# find the docker socket owner group id
-DOCKER_SOCK_OWNER_GROUP_ID=$(stat -c '%g' /var/run/docker.sock)
-# check the container's groups to see if it has a group with the same id
-DOCKER_SOCK_OWNER_GROUP=$(getent group "$DOCKER_SOCK_OWNER_GROUP_ID" | cut -d: -f1)
-if [ -z "${DOCKER_SOCK_OWNER_GROUP}" ]; then
-    # there is no group in the container with the given group id
-    # set owner group as 'docker'
-    DOCKER_SOCK_OWNER_GROUP="docker"
-    # create a new group with the same group id
-    groupadd -g "$DOCKER_SOCK_OWNER_GROUP_ID" "$DOCKER_SOCK_OWNER_GROUP"
+# if a docker socket exists, find the docker socker owner group id
+if [ -S /var/run/docker.sock ]; then
+    DOCKER_SOCK_OWNER_GROUP_ID=$(stat -c '%g' /var/run/docker.sock)
+    # check the container's groups to see if it has a group with the same id
+    DOCKER_SOCK_OWNER_GROUP=$(getent group "$DOCKER_SOCK_OWNER_GROUP_ID" | cut -d: -f1)
+    if [ -z "${DOCKER_SOCK_OWNER_GROUP}" ]; then
+        # there is no group in the container with the given group id
+        # set owner group as 'docker'
+        DOCKER_SOCK_OWNER_GROUP="docker"
+        # create a new group with the same group id
+        groupadd -g "$DOCKER_SOCK_OWNER_GROUP_ID" "$DOCKER_SOCK_OWNER_GROUP"
+    fi
 fi
 
 if [ -f /sshd-conf/remotes.json ]; then
@@ -33,7 +35,9 @@ if [ "$GIT_REMOTES_CONF" != "null" ]; then
         chown -R $repo:$repo $HOME_DIR/git-shell-commands
         chmod +x $HOME_DIR/git-shell-commands/no-interactive-login
 
-        usermod -aG "$DOCKER_SOCK_OWNER_GROUP" "$repo"
+        if [ -n "$DOCKER_SOCK_OWNER_GROUP" ]; then
+            usermod -aG "$DOCKER_SOCK_OWNER_GROUP" "$repo"
+        fi
 
         # Create the .ssh directory if it does not exist
         mkdir -p $HOME_DIR/.ssh
@@ -48,6 +52,9 @@ if [ "$GIT_REMOTES_CONF" != "null" ]; then
 
         chmod 644 $HOME_DIR/.ssh/authorized_keys
         chown -R $repo:$repo $HOME_DIR/.ssh
+
+        # Setup uidmap as necessary for img builds.
+        echo user:100000:65536 | tee /etc/subuid | tee /etc/subgid
 
         # Generate kubernetes configuration
         mkdir $HOME_DIR/.kube

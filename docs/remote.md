@@ -36,6 +36,7 @@ spec:
     - name: www                           # Name of container in the deployment which is built during git push
       path: example/www                   # Docker build context path in the git repo
       dockerfile: example/www/Dockerfile  # Location of Dockerfile for the source code
+      imgBuild: false                     # Whether to force use of img to perform the build
       buildArgs:                          # Any --build-args during docker build
       - name: SOME_BUILD_ARG
         value: something

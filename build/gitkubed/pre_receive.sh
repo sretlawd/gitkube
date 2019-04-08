@@ -154,6 +154,7 @@ do
             DEPL_DOCKER_CONTEXT=$(echo $DEPL_OPTS | jq -c -r --arg i $IMAGE_NAME '.[$i].path')
             DEPL_DOCKER_FILE_PATH=$(echo $DEPL_OPTS | jq -c -r --arg i $IMAGE_NAME '.[$i].dockerfile')
             NO_CACHE=$(echo $DEPL_OPTS | jq -c -r --arg i $IMAGE_NAME '.[$i].noCache')
+            IMG_BUILD=$(echo $DEPL_OPTS | jq -c -r --arg i $IMAGE_NAME '.[$i].imgBuild')
             RAW_BUILD_ARGS=$(echo $DEPL_OPTS | jq -c -r --arg i $IMAGE_NAME '.[$i].buildArgs')
             BUILD_ARGS=""
 
@@ -188,15 +189,21 @@ do
                 export CUR_IMAGE="${REGISTRY_PREFIX}/${CUR_IMAGE}"
             fi
 
+            DOCKER="docker"
+            if [ "${IMG_BUILD}" = "true" -o ! -S /var/run/docker.sock ]; then
+                echo "Performing build with genuinetools/img."
+                DOCKER="img"
+            fi
             NO_CACHE_ARGS=""
             if [ "${NO_CACHE}" = "true" ]; then
                 NO_CACHE_ARGS="--no-cache"
             fi
+
             echo "Building Docker image : ${CUR_IMAGE}"
-            docker build $NO_CACHE_ARGS -t "${CUR_IMAGE}" -f "${DOCKERFILE_PATH}" $BUILD_ARGS "${DOCKER_BUILD_CONTEXT}" || exit 1
+            ${DOCKER} build $NO_CACHE_ARGS -t "${CUR_IMAGE}" -f "${DOCKERFILE_PATH}" $BUILD_ARGS "${DOCKER_BUILD_CONTEXT}" || exit 1
             if [ -n "$REGISTRY_PREFIX" ]; then
                 echo "pushing ${CUR_IMAGE} to registry"
-                docker push "${CUR_IMAGE}" || exit 1
+                ${DOCKER} push "${CUR_IMAGE}" || exit 1
             fi
 
             # Keep appending "container-name=docker-image-name" in a string.

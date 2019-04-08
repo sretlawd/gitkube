@@ -9,20 +9,21 @@ SETUP_MANIFEST_FILE ?= "manifests/gitkube-setup.yaml"
 
 PWD := $(shell pwd)
 VERSION := $(shell hack/get-version.sh)
+DOCKER := "docker"
 
 build-controller:
-	docker build -t $(CONTROLLER_IMAGE):$(VERSION) .
+	$(DOCKER) build -t $(CONTROLLER_IMAGE):$(VERSION) .
 	$(shell sed -i -E "s@image: .+\/$(CONTROLLER_IMAGE_NAME):.+@image: $(CONTROLLER_IMAGE):$(VERSION)@" $(SETUP_MANIFEST_FILE))
 
 push-controller:
-	docker push $(CONTROLLER_IMAGE):$(VERSION)
+	$(DOCKER) push $(CONTROLLER_IMAGE):$(VERSION)
 
 build-gitkubed:
-	docker build -t $(GITKUBED_IMAGE):$(VERSION) $(GITKUBED_DIR)
+	$(DOCKER) build -t $(GITKUBED_IMAGE):$(VERSION) $(GITKUBED_DIR)
 	$(shell sed -i -E "s@image: .+\/$(GITKUBED_IMAGE_NAME):.+@image: $(GITKUBED_IMAGE):$(VERSION)@" $(SETUP_MANIFEST_FILE))
 
 push-gitkubed:
-	docker push $(GITKUBED_IMAGE):$(VERSION)
+	$(DOCKER) push $(GITKUBED_IMAGE):$(VERSION)
 
 build-all: build-controller build-gitkubed
 push-all: push-controller push-gitkubed
@@ -41,8 +42,8 @@ build-cli:
 
 # build cli inside a docker container
 build-cli-in-docker:
-	docker build -t gitkube-cli-builder -f build/cli-builder.dockerfile build
-	docker run --rm -it \
+	$(DOCKER) build -t gitkube-cli-builder -f build/cli-builder.dockerfile build
+	$(DOCKER) run --rm -it \
 	-v $(PWD):/go/src/github.com/hasura/gitkube \
 	gitkube-cli-builder \
 	make build-cli

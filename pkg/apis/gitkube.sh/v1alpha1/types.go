@@ -77,6 +77,9 @@ type ContainerSpec struct {
 	// Location of dockerfile for the container
 	Dockerfile string `json:"dockerfile"`
 
+	// Force use of img to perform the build
+	ImgBuild bool `json:"imgBuild,omitempty"`
+
 	// Docker build args --build-args
 	BuildArgs []BuildArg `json:"buildArgs,omitempty"`
 }
